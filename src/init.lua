@@ -23,11 +23,12 @@ function DebugUi.observe(name: string, data: {[any]: any}): () -> ()
     Instance.new("UIDragDetector", container)
 
     local dataUi = DataUi.new(container, name, data)
-    RunService.PreRender:Connect(function() 
+    local connection = RunService.PreRender:Connect(function() 
         dataUi:Update(data)
     end)
 
     return function()
+        connection:Disconnect()
         dataUi:Destroy()
         screenGui:Destroy()
     end
