@@ -1,0 +1,23 @@
+{
+  "name": "debug-ui",
+  "tree": {
+    "$className": "DataModel",
+
+    "ReplicatedStorage": {
+      "$className": "ReplicatedStorage",
+      "DebugUi": {
+        "$path": "src"
+      }
+    },
+
+    "StarterPlayer": {
+      "$className": "StarterPlayer",
+      "StarterPlayerScripts": {
+        "$className": "StarterPlayerScripts",
+        "examples": {
+          "$path": "examples"
+        }
+      }
+    }
+  }
+}
