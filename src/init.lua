@@ -1,7 +1,6 @@
 --!strict
 
 local RunService = game:GetService("RunService")
-local PlayerGui = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
 
 local DataUi = require(script.DataUi)
 
@@ -11,7 +10,7 @@ function DebugUi.observe(name: string, data: any): () -> ()
 	local screenGui = Instance.new("ScreenGui")
 	screenGui.Name = `DebugUi - {name}`
 	screenGui.ResetOnSpawn = false
-	screenGui.Parent = PlayerGui
+	screenGui.Parent = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
 
 	local container = Instance.new("Frame")
 	container.Name = "container"
