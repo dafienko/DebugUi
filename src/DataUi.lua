@@ -1,7 +1,5 @@
 --!strict
 
-local CycleDetected = {}
-
 local DataUi = {}
 DataUi.__index = DataUi
 
@@ -20,7 +18,7 @@ export type DataUi = typeof(setmetatable(
 	DataUi
 ))
 
-function DataUi.new(parent: Instance, key: any, value: any, trackedTables: { [any]: boolean }): DataUi
+function DataUi.new(parent: Instance, key: any, value: any, trackedTables: { [any]: boolean }?): DataUi
 	local container = Instance.new("Frame")
 	container.Name = key
 	container.Size = UDim2.fromOffset(0, 0)
@@ -104,11 +102,7 @@ function DataUi.new(parent: Instance, key: any, value: any, trackedTables: { [an
 		self:_onHeaderButton()
 	end)
 
-	if typeof(value) == "table" and value ~= CycleDetected then
-		trackedTables[value] = true
-	end
-
-	self:Update(value, trackedTables)
+	self:Update(value, trackedTables or {})
 
 	container.Parent = parent
 
@@ -174,21 +168,43 @@ function DataUi._getChildrenContainer(self: DataUi): GuiObject
 	return childrenContainer
 end
 
+local function doesTableHaveDebugImpl(t: any): boolean
+	local success, value = pcall(function()
+		local f = t["_debug"]
+		return type(f) == "function"
+	end)
+
+	return success and value
+end
+
 function DataUi.Update(self: DataUi, value: any, trackedTables: { [any]: boolean })
 	task.defer(self._updateHeaderButton, self)
-	trackedTables[value] = true
+
+	local isValueAlreadyTracked = false
+	local renderValue = value
+	local renderType = typeof(value)
+	if typeof(value) == "table" then
+		isValueAlreadyTracked = trackedTables[value]
+		trackedTables[value] = true
+
+		if doesTableHaveDebugImpl(value) then
+			renderValue, renderType = value:_debug()
+		end
+	end
 
 	self.keyLabel.Text =
-		`{if typeof(self.key) == "string" then `"{self.key}":` else `[{tostring(self.key)}]:`} {typeof(value)}`
-	if value == CycleDetected then
+		`{if typeof(self.key) == "string" then `"{self.key}":` else `[{tostring(self.key)}]:`} {renderType or typeof(
+			value
+		)}`
+	if isValueAlreadyTracked then
 		self.valueLabel.Text = "cycle_cetected"
 		self.valueLabel.TextColor3 = Color3.fromRGB(255, 95, 95)
 	else
-		self.valueLabel.Text = tostring(value)
+		self.valueLabel.Text = tostring(renderValue)
 		self.valueLabel.TextColor3 = Color3.fromHSV(0, 0, 1)
 	end
 
-	if typeof(value) ~= "table" or value == CycleDetected then
+	if typeof(renderValue) ~= "table" or isValueAlreadyTracked then
 		for _, v in self.children do
 			v:Destroy()
 		end
@@ -202,7 +218,7 @@ function DataUi.Update(self: DataUi, value: any, trackedTables: { [any]: boolean
 	end
 
 	for childKey, childDataUi in self.children do
-		local newChildValue = value[childKey]
+		local newChildValue = renderValue[childKey]
 		local child = self.children[childKey]
 		if newChildValue == nil then
 			child:Destroy()
@@ -210,27 +226,16 @@ function DataUi.Update(self: DataUi, value: any, trackedTables: { [any]: boolean
 			continue
 		end
 
-		local isTracked = typeof(newChildValue) == "table"
-			and newChildValue ~= CycleDetected
-			and trackedTables[newChildValue]
-		if not isTracked and typeof(newChildValue) == "table" then
-			trackedTables[newChildValue] = true
-		end
-		child:Update(if isTracked then CycleDetected else newChildValue, trackedTables)
+		child:Update(newChildValue, trackedTables)
 	end
 
 	local childrenContainer = self:_getChildrenContainer()
-	for childKey, childValue in value do
+	for childKey, childValue in renderValue do
 		if self.children[childKey] then
 			continue
 		end
 
-		local isTracked = typeof(value) == "table" and value ~= CycleDetected and trackedTables[value]
-		if not isTracked and typeof(value) == "table" then
-			trackedTables[value] = true
-		end
-		self.children[childKey] =
-			DataUi.new(childrenContainer, childKey, if isTracked then CycleDetected else childValue, trackedTables)
+		self.children[childKey] = DataUi.new(childrenContainer, childKey, childValue, trackedTables)
 	end
 end
 
