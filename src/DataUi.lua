@@ -19,11 +19,27 @@ export type DataUi = typeof(setmetatable(
 ))
 
 function DataUi.new(parent: Instance, key: any, value: any, trackedTables: { [any]: boolean }?): DataUi
-	local container = Instance.new("Frame")
-	container.Name = key
-	container.Size = UDim2.fromOffset(0, 0)
-	container.AutomaticSize = Enum.AutomaticSize.XY
-	container.BackgroundTransparency = 1
+	local container: GuiObject
+	if trackedTables then
+		local frame = Instance.new("Frame")
+		frame.Name = key
+		frame.Size = UDim2.fromOffset(0, 0)
+		frame.AutomaticSize = Enum.AutomaticSize.XY
+		frame.BackgroundTransparency = 1
+		container = frame
+	else
+		local scrollingFrame = Instance.new("ScrollingFrame")
+		scrollingFrame.Name = key
+		scrollingFrame.Size = UDim2.fromScale(1, 1)
+		scrollingFrame.AutomaticSize = Enum.AutomaticSize.None
+		scrollingFrame.BackgroundTransparency = 1
+		scrollingFrame.CanvasSize = UDim2.new()
+		scrollingFrame.AutomaticCanvasSize = Enum.AutomaticSize.XY
+		scrollingFrame.ScrollBarThickness = 1
+		scrollingFrame.ScrollBarImageColor3 = Color3.fromHSV(0, 0, 1)
+		scrollingFrame.ScrollBarImageTransparency = 0
+		container = scrollingFrame
+	end
 
 	local outerLayout = Instance.new("UIListLayout")
 	outerLayout.Name = "outerLayout"
@@ -97,9 +113,9 @@ function DataUi.new(parent: Instance, key: any, value: any, trackedTables: { [an
 		children = {},
 	}, DataUi)
 
-	self:_updateHeaderButton()
 	headerButton.Activated:Connect(function()
-		self:_onHeaderButton()
+		local childrenContainer = self:_getChildrenContainer()
+		childrenContainer.Visible = not childrenContainer.Visible
 	end)
 
 	self:Update(value, trackedTables or {})
@@ -107,28 +123,6 @@ function DataUi.new(parent: Instance, key: any, value: any, trackedTables: { [an
 	container.Parent = parent
 
 	return self
-end
-
-function DataUi._updateHeaderButton(self: DataUi)
-	if not self.childrenContainer or next(self.children) == nil then
-		self.headerButton.Text = ""
-		return
-	end
-
-	self.headerButton.Text = if self.childrenContainer.Visible then "-" else "+"
-end
-
-function DataUi._onHeaderButton(self: DataUi)
-	if not self.childrenContainer then
-		return
-	end
-
-	if next(self.children) == nil then
-		return
-	end
-
-	self.childrenContainer.Visible = not self.childrenContainer.Visible
-	self:_updateHeaderButton()
 end
 
 function DataUi._getChildrenContainer(self: DataUi): GuiObject
@@ -144,6 +138,7 @@ function DataUi._getChildrenContainer(self: DataUi): GuiObject
 	childrenContainer.AutomaticSize = Enum.AutomaticSize.XY
 	childrenContainer.Size = UDim2.fromOffset(0, 0)
 	childrenContainer.LayoutOrder = 2
+	childrenContainer.Visible = false
 	childrenContainer.Parent = self.container
 
 	local innerPadding = Instance.new("UIPadding")
@@ -178,8 +173,6 @@ local function doesTableHaveDebugImpl(t: any): boolean
 end
 
 function DataUi.Update(self: DataUi, value: any, trackedTables: { [any]: boolean })
-	task.defer(self._updateHeaderButton, self)
-
 	local isValueAlreadyTracked = false
 	local renderValue = value
 	local renderType = typeof(value)
@@ -191,6 +184,8 @@ function DataUi.Update(self: DataUi, value: any, trackedTables: { [any]: boolean
 			renderValue, renderType = value:_debug()
 		end
 	end
+
+	self.headerButton.Text = ""
 
 	self.keyLabel.Text =
 		`{if typeof(self.key) == "string" then `"{self.key}":` else `[{tostring(self.key)}]:`} {renderType or typeof(
@@ -214,6 +209,12 @@ function DataUi.Update(self: DataUi, value: any, trackedTables: { [any]: boolean
 			self.childrenContainer.Visible = false
 		end
 
+		return
+	end
+
+	self.headerButton.Text = if self.childrenContainer and self.childrenContainer.Visible then "-" else "+"
+
+	if not (self.childrenContainer and self.childrenContainer.Visible) then
 		return
 	end
 
