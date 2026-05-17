@@ -22,14 +22,14 @@ function DataUi.new(parent: Instance, key: any, value: any, trackedTables: { [an
 	local container: GuiObject
 	if trackedTables then
 		local frame = Instance.new("Frame")
-		frame.Name = key
+		frame.Name = tostring(key)
 		frame.Size = UDim2.fromOffset(0, 0)
 		frame.AutomaticSize = Enum.AutomaticSize.XY
 		frame.BackgroundTransparency = 1
 		container = frame
 	else
 		local scrollingFrame = Instance.new("ScrollingFrame")
-		scrollingFrame.Name = key
+		scrollingFrame.Name = tostring(key)
 		scrollingFrame.Size = UDim2.fromScale(1, 1)
 		scrollingFrame.AutomaticSize = Enum.AutomaticSize.None
 		scrollingFrame.BackgroundTransparency = 1
